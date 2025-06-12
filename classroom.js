@@ -1,6 +1,6 @@
 // --- CONFIGURATION ---
 // Paste the Client ID you got from the Google Cloud Console here.
-const CLIENT_ID = 'PASTE_YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
+const CLIENT_ID = '280652184192-b9pmo31fujnjch8s4gr8vlcndn1bmme7.apps.googleusercontent.com';
 
 // These are the 'permissions' we will ask the user for.
 const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me';
