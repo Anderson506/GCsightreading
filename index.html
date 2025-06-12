@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <div id="google-classroom-section" style="padding: 15px; border: 1px solid #ccc; margin: 15px 0; border-radius: 8px;">
+    <h3>Google Classroom Integration</h3>
+    <p>Sign in to connect your account and create assignments directly in Google Classroom.</p>
+    
+    <div id="g_id_signin" 
+         data-type="standard" 
+         data-size="large" 
+         data-theme="outline" 
+         data-text="sign_in_with" 
+         data-shape="rectangular" 
+         data-logo_alignment="left">
+    </div>
+
+    <div id="classroom-controls" style="display: none; margin-top: 15px;">
+        <label for="courses-dropdown">Select a Course:</label>
+        <select id="courses-dropdown"></select>
+        <button id="create-assignment-btn" style="margin-left: 10px;">Create Sight-Reading Assignment</button>
+        <p id="feedback-message" style="margin-top: 10px; color: green;"></p>
+    </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="classroom.js" async defer></script>  
+  
+  <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-a-Day Note Reading Quiz</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+        }
+
+        .voice-selector {
+            background: #f0f8ff;
+            border: 2px solid #bee3f8;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .voice-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .voice-btn {
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .voice-btn:hover {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+
+        .voice-btn.selected {
+            border-color: #4299e1;
+            background: #4299e1;
+            color: white;
+        }
+
+        .start-section {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .quiz-section {
+            display: none;
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .staff-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .input-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .note-input {
+            font-size: 2rem;
+            padding: 15px 25px;
+            border: 3px solid #4299e1;
+            border-radius: 10px;
+            text-align: center;
+            width: 100px;
+            margin: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+
+        .feedback {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .feedback.incorrect {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .progress {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .results {
+            display: none;
+            text-align: center;
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .copy-status {
+            margin-top: 10px;
+            color: #38a169;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 5-a-Day Note Reading Quiz</h1>
+            <p>Build your note reading skills with daily practice!</p>
+        </div>
+
+        <!-- Voice Selection -->
+        <div class="voice-selector" id="voiceSelector">
+            <h3>🎵 Select Your Voice Type</h3>
+            <div class="voice-options">
+                <div class="voice-btn" data-voice="soprano">
+                    <div>Soprano</div>
+                    <div style="font-size: 0.8rem; color: #718096;">Treble Clef</div>
+                </div>
+                <div class="voice-btn" data-voice="alto">
+                    <div>Alto</div>
+                    <div style="font-size: 0.8rem; color: #718096;">Treble Clef</div>
+                </div>
+                <div class="voice-btn" data-voice="tenor">
+                    <div>Tenor</div>
+                    <div style="font-size: 0.8rem; color: #718096;">Treble Clef</div>
+                </div>
+                <div class="voice-btn" data-voice="baritone">
+                    <div>Baritone</div>
+                    <div style="font-size: 0.8rem; color: #718096;">Bass Clef</div>
+                </div>
+                <div class="voice-btn" data-voice="bass">
+                    <div>Bass</div>
+                    <div style="font-size: 0.8rem; color: #718096;">Bass Clef</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Section -->
+        <div class="start-section" id="startSection">
+            <button class="btn btn-success" id="startBtn">🚀 Start Today's Quiz</button>
+        </div>
+
+        <!-- Quiz Section -->
+        <div class="quiz-section" id="quizSection">
+            <div class="progress" id="progress">Question 1 of 5</div>
+            <canvas id="staffCanvas" class="staff-canvas" width="600" height="300"></canvas>
+            
+            <div class="input-section">
+                <p>Type the note name (A, B, C, D, E, F, or G):</p>
+                <input type="text" id="noteInput" class="note-input" maxlength="1">
+                <br>
+                <button class="btn btn-primary" id="submitBtn">Submit Answer</button>
+                <button class="btn btn-primary" id="playBtn">🔊 Play Note</button>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results" id="results">
+            <h3>🎉 Quiz Complete!</h3>
+            <div id="finalScore">Score: 0/5</div>
+            <div style="margin: 20px 0;">
+                <button class="btn btn-primary" id="newQuizBtn">Take Another Quiz</button>
+                <button class="btn btn-success" id="copyResultsBtn">📋 Copy Results</button>
+                <button class="btn btn-secondary" id="exportFileBtn">💾 Download Report</button>
+            </div>
+            <div class="copy-status" id="copyStatus">Copied to clipboard!</div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedVoice = null;
+        let currentQuestion = 1;
+        let totalQuestions = 5;
+        let currentNote = null;
+        let currentClef = null;
+        let answers = [];
+        let synth = null;
+
+        // Voice ranges
+        const voiceRanges = {
+            soprano: {
+                clef: 'treble',
+                notes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5']
+            },
+            alto: {
+                clef: 'treble', 
+                notes: ['F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5']
+            },
+            tenor: {
+                clef: 'treble',
+                notes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']  // More practical tenor range
+            },
+            baritone: {
+                clef: 'bass',
+                notes: ['A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4']  // Typical baritone range
+            },
+            bass: {
+                clef: 'bass',
+                notes: ['E2', 'F2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4']
+            }
+        };
+
+        function getNotePosition(note, clef, staffTop, lineSpacing) {
+            // Define the position of each note relative to the staff
+            const treblePositions = {
+                // Notes above the staff
+                'G5': -1,  // Above top line
+                'F5': 0,   // Top line
+                'E5': 1,   // Top space
+                'D5': 2,   // Fourth line
+                'C5': 3,   // Fourth space
+                'B4': 4,   // Third line
+                'A4': 5,   // Third space
+                'G4': 6,   // Second line
+                'F4': 7,   // Second space
+                'E4': 8,   // First line
+                'D4': 9,   // First space
+                'C4': 10,  // First ledger line below
+                'B3': 11,  // First space below
+                'A3': 12,  // Second ledger line below
+                'G3': 13,  // Second space below
+                'F3': 14,  // Third ledger line below
+                'E3': 15,  // Third space below
+                'D3': 16,  // Fourth ledger line below
+                'C3': 17   // Fourth space below
+            };
+
+            const bassPositions = {
+                'G2': 8,   // Bottom line
+                'A2': 7,   // First space
+                'B2': 6,   // Second line
+                'C3': 5,   // Second space
+                'D3': 4,   // Third line
+                'E3': 3,   // Third space
+                'F3': 2,   // Fourth line
+                'G3': 1,   // Fourth space
+                'A3': 0,   // Fifth line
+                'B3': -1,  // Fifth space
+                'C4': -2,  // First ledger line above
+                'D4': -3,  // First space above
+                'E4': -4,  // Second ledger line above
+                'F4': -5,  // Second space above
+                'G4': -6,  // Third ledger line above
+                'A4': -7,  // Third space above
+                'F2': 9,   // First ledger line below
+                'E2': 10   // First space below
+            };
+
+            const positions = clef === 'treble' ? treblePositions : bassPositions;
+            const position = positions[note] || 0;
+            
+            // Calculate the y-coordinate based on the position
+            // Each position represents half a line spacing (space or line)
+            return staffTop + (position * lineSpacing / 2);
+        }
+
+        // Initialize
+        function init() {
+            synth = new Tone.Synth().toDestination();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            // Voice selection
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                btn.addEventListener('click', () => selectVoice(btn.dataset.voice));
+            });
+            
+            // Quiz controls
+            document.getElementById('startBtn').addEventListener('click', startQuiz);
+            document.getElementById('submitBtn').addEventListener('click', submitAnswer);
+            document.getElementById('playBtn').addEventListener('click', playNote);
+            document.getElementById('newQuizBtn').addEventListener('click', resetQuiz);
+            document.getElementById('copyResultsBtn').addEventListener('click', copyResults);
+            document.getElementById('exportFileBtn').addEventListener('click', exportResults);
+            
+            // Input handling
+            document.getElementById('noteInput').addEventListener('input', function(e) {
+                e.target.value = e.target.value.toUpperCase().replace(/[^A-G]/, '');
+            });
+            
+            document.getElementById('noteInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') submitAnswer();
+            });
+        }
+
+        function selectVoice(voice) {
+            selectedVoice = voice;
+            
+            // Update UI
+            document.querySelectorAll('.voice-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelector(`[data-voice="${voice}"]`).classList.add('selected');
+            
+            // Show start button
+            document.getElementById('startSection').style.display = 'block';
+        }
+
+        function startQuiz() {
+            if (!selectedVoice) return;
+            
+            currentQuestion = 1;
+            answers = [];
+            
+            // Show quiz section
+            document.getElementById('voiceSelector').style.display = 'none';
+            document.getElementById('startSection').style.display = 'none';
+            document.getElementById('quizSection').style.display = 'block';
+            
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentQuestion > totalQuestions) {
+                showResults();
+                return;
+            }
+            
+            // Update progress
+            document.getElementById('progress').textContent = `Question ${currentQuestion} of ${totalQuestions}`;
+            
+            // Generate random note from voice range
+            const voiceRange = voiceRanges[selectedVoice];
+            const notes = voiceRange.notes;
+            currentNote = notes[Math.floor(Math.random() * notes.length)];
+            currentClef = voiceRange.clef;
+            
+            // Draw staff
+            drawStaff();
+            
+            // Reset input
+            document.getElementById('noteInput').value = '';
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('noteInput').focus();
+        }
+
+        function drawStaff() {
+            const canvas = document.getElementById('staffCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw staff lines
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            
+            // Staff position and spacing
+            const staffTop = 100;
+            const lineSpacing = 20;
+            
+            // Draw the 5 staff lines
+            for (let i = 0; i < 5; i++) {
+                const y = staffTop + i * lineSpacing;
+                ctx.beginPath();
+                ctx.moveTo(100, y);
+                ctx.lineTo(500, y);
+                ctx.stroke();
+            }
+            
+            // Draw appropriate clef
+            ctx.font = '60px serif';
+            ctx.fillStyle = '#333';
+            if (currentClef === 'treble') {
+                ctx.fillText('𝄞', 110, staffTop + 40);
+            } else {
+                ctx.fillText('𝄢', 110, staffTop + 40);
+            }
+            
+            // Show clef type
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#4299e1';
+            ctx.fillText(`${currentClef.charAt(0).toUpperCase() + currentClef.slice(1)} Clef`, 20, 260);
+            
+            // Draw note
+            drawNote(ctx, staffTop, lineSpacing);
+        }
+
+        function drawNote(ctx, staffTop, lineSpacing) {
+            const y = getNotePosition(currentNote, currentClef, staffTop, lineSpacing);
+            const x = 300;
+            
+            // Draw note
+            ctx.fillStyle = '#e53e3e';
+            ctx.beginPath();
+            ctx.ellipse(x, y, 10, 7, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw stem
+            ctx.strokeStyle = '#e53e3e';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            if (y > staffTop + 40) {
+                ctx.moveTo(x + 10, y);
+                ctx.lineTo(x + 10, y - 30);
+            } else {
+                ctx.moveTo(x - 10, y);
+                ctx.lineTo(x - 10, y + 30);
+            }
+            ctx.stroke();
+            
+            // Add ledger lines if needed
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            
+            // Below staff ledger lines
+            if (y > staffTop + 80) {
+                for (let ledgerY = staffTop + 80; ledgerY <= y; ledgerY += lineSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - 15, ledgerY);
+                    ctx.lineTo(x + 15, ledgerY);
+                    ctx.stroke();
+                }
+            }
+            
+            // Above staff ledger lines  
+            if (y < staffTop) {
+                for (let ledgerY = staffTop; ledgerY >= y; ledgerY -= lineSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - 15, ledgerY);
+                    ctx.lineTo(x + 15, ledgerY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        async function playNote() {
+            await Tone.start();
+            synth.triggerAttackRelease(currentNote, '1n');
+        }
+
+        function submitAnswer() {
+            const userAnswer = document.getElementById('noteInput').value.toUpperCase();
+            const correctAnswer = currentNote.charAt(0);
+            const isCorrect = userAnswer === correctAnswer;
+            
+            answers.push(isCorrect);
+            
+            // Show feedback
+            const feedback = document.getElementById('feedback');
+            feedback.style.display = 'block';
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.textContent = isCorrect ? 
+                `✅ Correct! That note is ${correctAnswer}.` : 
+                `❌ Not quite. That note is ${correctAnswer}, you answered ${userAnswer}.`;
+            
+            // Move to next question after delay
+            setTimeout(() => {
+                currentQuestion++;
+                nextQuestion();
+            }, 2000);
+        }
+
+        function showResults() {
+            const correct = answers.filter(a => a).length;
+            const percentage = Math.round((correct / totalQuestions) * 100);
+            
+            document.getElementById('quizSection').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('finalScore').textContent = `Score: ${correct}/${totalQuestions} (${percentage}%)`;
+        }
+
+        function resetQuiz() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('voiceSelector').style.display = 'block';
+            document.getElementById('startSection').style.display = 'block';
+        }
+
+        function getResultsText() {
+            const correct = answers.filter(a => a).length;
+            const percentage = Math.round((correct / totalQuestions) * 100);
+            
+            return `5-a-Day Note Reading Quiz Results
+Date: ${new Date().toLocaleString()}
+Student Name: ___________________
+
+QUIZ SUMMARY:
+Voice Type: ${selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1)}
+Clef: ${currentClef.charAt(0).toUpperCase() + currentClef.slice(1)} Clef
+Score: ${correct}/${totalQuestions} (${percentage}%)
+
+PERFORMANCE ANALYSIS:
+${percentage >= 80 ? 'Excellent note reading! Student shows strong staff recognition skills.' :
+  percentage >= 60 ? 'Good progress. Continue daily practice to improve accuracy.' :
+  'Needs more practice. Recommend additional note identification exercises.'}
+
+NOTES FOR TEACHER:
+- Student practiced notes appropriate for their voice type and clef
+- Daily 5-question practice helps build automatic note recognition
+- Voice-specific ranges ensure students read notes they'll actually sing
+- Consider additional staff reading exercises if score is below 60%
+
+RECOMMENDATIONS:
+- Continue daily 5-a-Day practice for consistent improvement
+- Focus on note reading within comfortable vocal range
+- Use audio playback feature to connect visual and auditory learning
+- Build toward sight-singing once note recognition becomes automatic
+
+Generated by 5-a-Day Note Reading Quiz
+Part of the Choir Education Tool Suite`;
+        }
+
+        function copyResults() {
+            const resultsText = getResultsText();
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(resultsText).then(() => {
+                    const status = document.getElementById('copyStatus');
+                    status.style.display = 'block';
+                    setTimeout(() => { status.style.display = 'none'; }, 2000);
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = resultsText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                const status = document.getElementById('copyStatus');
+                status.style.display = 'block';
+                setTimeout(() => { status.style.display = 'none'; }, 2000);
+            }
+        }
+
+        function exportResults() {
+            const resultsText = getResultsText();
+            const dataBlob = new Blob([resultsText], {type: 'text/plain'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `note-reading-quiz-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Start everything
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
